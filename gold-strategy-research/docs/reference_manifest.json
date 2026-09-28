@@ -1,0 +1,23 @@
+[
+  {
+    "repo": "lucienismael/algorithmic-trading-backtester",
+    "commit": "e3fe9efa4ff77a97b92e1727e90c89f17f69ca8d",
+    "inspected": [
+      "strategy.py",
+      "walk_forward.py"
+    ],
+    "license_detected": null,
+    "accessed": "2026-09-28",
+    "reuse": "Ideas only; no source copied"
+  },
+  {
+    "repo": "codewithpom/GOLD-START",
+    "commit": "bfb9a050171ceae013f4f04cfee3f33472fc4767",
+    "inspected": [
+      "data_prep.py"
+    ],
+    "license_detected": null,
+    "accessed": "2026-09-28",
+    "reuse": "Ideas only; no source copied"
+  }
+]

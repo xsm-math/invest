@@ -1,0 +1,9 @@
+{
+  "annualized_mean_daily_difference": -0.016084743301681952,
+  "lower_95": -0.04619625611418284,
+  "upper_95": 0.01423542607965131,
+  "block_size": 20,
+  "repetitions": 2000,
+  "seed": 42,
+  "note": "Exploratory stationary-block assumption; annualized arithmetic mean difference, NOT CAGR difference. No multiple-testing correction."
+}

@@ -1,0 +1,16 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "gold-strategy-research"
+version = "0.2.0"
+description = "Reproducible gold allocation research with causal execution and rolling validation"
+requires-python = ">=3.10"
+dependencies = ["numpy>=1.24,<3", "pandas>=2.0,<3", "matplotlib>=3.7,<4"]
+
+[project.scripts]
+gold-research = "gold_research.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]

@@ -1,0 +1,43 @@
+{
+  "config": {
+    "data_path": "data/GLD.csv",
+    "start": "2007-01-01",
+    "end_exclusive": "2026-01-01",
+    "cost_bps": 10.0,
+    "cash_rate": 0.0,
+    "ma": 200,
+    "vol_window": 60,
+    "target_vol": 0.1,
+    "mr_window": 20,
+    "mr_entry": 1.5,
+    "walk_forward": {
+      "train_years": 5,
+      "first_test_year": 2015,
+      "last_test_year": 2025,
+      "ma_grid": [
+        150,
+        200,
+        250
+      ],
+      "vol_grid": [
+        0.08,
+        0.1,
+        0.12
+      ]
+    },
+    "bootstrap": {
+      "block_size": 20,
+      "repetitions": 2000,
+      "seed": 42
+    }
+  },
+  "data_sha256": "a97121f4a34408cfa87b2a9a54d7bab4a3f16b2010324dd9b2c00065f0dceddf",
+  "python": "3.12.14",
+  "numpy": "2.3.5",
+  "pandas": "2.2.3",
+  "matplotlib": "3.10.8",
+  "first_price": "2005-01-03",
+  "last_price": "2025-12-31",
+  "rows": 5283,
+  "note": "Historical research; no genuinely untouched prospective test. Raw market data excluded from Git."
+}

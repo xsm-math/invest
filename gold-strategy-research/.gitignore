@@ -1,0 +1,16 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+.env
+.env.*
+!.env.example
+.ipynb_checkpoints/
+.pytest_cache/
+build/
+dist/
+# External market data stays local; fetch with documented command.
+data/*
+!data/README.md
+reports/generated/
+*.zip
