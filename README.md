@@ -7,3 +7,5 @@
 包含六种黄金配置规则、年度滚动选参、交易成本分析及离线测试。历史模拟不代表未来收益。
 
 进入 `gold-strategy-research` 目录后按项目说明安装并运行。原始行情不提交至仓库，可使用项目下载命令获取。
+
+优先阅读：[趋势择时与波动率控制——规则数字、同口径比较和明确结论](gold-strategy-research/reports/reference/COMPARISON.md)。

@@ -27,11 +27,16 @@ def plot(results,path,title):
 
 def write_report(out,summary,wf_summary,folds,interval,cfg,sha):
     hold=summary[summary.Period=='2020-2025']; full=summary[summary.Period=='All']
+    from .comparison import comparison
+    focused = comparison(summary, cfg)
+    (out/'COMPARISON.md').write_text('# 趋势择时与波动率控制：明确问题、数字与结论\n\n' + focused, encoding='utf-8')
     text=f'''# 黄金策略研究：模块化与滚动检验版
 
 本报告由本次程序输出生成；价格截至 {cfg['end_exclusive']}（不含），数据 SHA256：`{sha}`。
 
-## 研究方法
+{focused}
+
+## 研究方法与完整实验
 
 研究标的是美元黄金 ETF GLD，采用复权收盘价。预热数据从 2005 年开始，固定策略从 {cfg['start']} 开始。单边成本 {cfg['cost_bps']} bps，现金年利率假设 {cfg['cash_rate']:.2%}。不做空、不加杠杆、不模拟税收和整数份额限制。
 
