@@ -1,91 +1,91 @@
-"""Generate reviewable markdown and figures directly from research output."""
-from pathlib import Path
-import numpy as np
+"""Research tables, figures, and manuscript generation."""
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 
-NAMES={'buy_hold':'长期持有','fixed_50':'固定50%黄金','trend':'趋势择时','vol':'波动率控制',
-       'combined':'趋势＋波动率','mean_reversion':'月度均值回归','walk_forward':'滚动选参组合'}
+NAMES={'buy_hold':'Buy and hold','fixed_50':'Fixed 50%','trend':'Trend timing',
+       'vol':'Volatility targeting','combined':'Combined','mean_reversion':'Mean reversion',
+       'walk_forward':'Walk-forward'}
+
 
 def table(df):
-    lines=['| 策略 | 年化收益 | 年化波动 | 夏普 RF=0 | 最大回撤 | 年化换手 |',
+    lines=['| Strategy | CAGR | Volatility | Sharpe | Max. drawdown | Annual turnover |',
            '|---|---:|---:|---:|---:|---:|']
     for _,r in df.iterrows():
-        lines.append(f'| {NAMES.get(r.Strategy,r.Strategy)} | {r.CAGR:.2%} | {r.Volatility:.2%} | {r.Sharpe_RF0:.2f} | {r.MaxDrawdown:.2%} | {r.TurnoverAnnual:.2f} |')
+        lines.append(f'| {NAMES.get(r.Strategy,r.Strategy)} | {r.CAGR:.2%} | {r.Volatility:.2%} | {r.Sharpe_RF0:.2f} | {abs(r.MaxDrawdown):.2%} | {r.TurnoverAnnual:.2f} |')
     return '\n'.join(lines)
 
+
 def plot(results,path,title):
-    fig,ax=plt.subplots(2,1,figsize=(11,8),sharex=True,gridspec_kw={'height_ratios':[2,1]})
+    fig,axes=plt.subplots(2,1,figsize=(11,8),sharex=True,gridspec_kw={'height_ratios':[2,1]})
     for mode,d in results.items():
-        ax[0].plot(d.index,d.nav,label=mode,lw=1.3)
-        ax[1].plot(d.index,d.nav/d.nav.cummax().clip(lower=1)-1,lw=1)
-    ax[0].set_yscale('log');ax[0].set_ylabel('NAV (log)');ax[0].set_title(title)
-    ax[0].legend(ncol=3,fontsize=9);ax[1].set_ylabel('Drawdown')
-    for a in ax:a.grid(alpha=.2)
+        axes[0].plot(d.index,d.nav,label=NAMES.get(mode,mode),lw=1.3)
+        axes[1].plot(d.index,d.nav/d.nav.cummax().clip(lower=1)-1,lw=1)
+    axes[0].set_yscale('log');axes[0].set_ylabel('NAV (log scale)');axes[0].set_title(title)
+    axes[0].legend(ncol=3,fontsize=9);axes[1].set_ylabel('Drawdown')
+    for ax in axes: ax.grid(alpha=.2)
     fig.tight_layout();fig.savefig(path,dpi=150);plt.close(fig)
 
+
 def write_report(out,summary,wf_summary,folds,interval,cfg,sha):
-    hold=summary[summary.Period=='2020-2025']; full=summary[summary.Period=='All']
     from .comparison import comparison
-    focused = comparison(summary, cfg)
-    (out/'COMPARISON.md').write_text('# 趋势择时与波动率控制：明确问题、数字与结论\n\n第一次阅读？先看[通俗图解](BEGINNER.md)。\n\n' + focused, encoding='utf-8')
-    text=f'''# 黄金策略研究：模块化与滚动检验版
+    (out/'COMPARISON.md').write_text(comparison(summary,cfg),encoding='utf-8')
+    full=summary[summary.Period=='All'];recent=summary[summary.Period=='2020-2025']
+    d=recent.set_index('Strategy')
+    text=f'''# Trend Timing and Volatility Targeting in Gold Allocation
 
-第一次阅读？先看[通俗图解](BEGINNER.md)：术语、资金分配例子，以及每张图的读法。
+## Abstract
 
-本报告由本次程序输出生成；价格截至 {cfg['end_exclusive']}（不含），数据 SHA256：`{sha}`。
+This study evaluates monthly allocation rules for SPDR Gold Shares (GLD). A moving-average filter is compared with volatility targeting, their combination, and passive allocations. In 2020–2025, volatility targeting returned {d.loc['vol','CAGR']:.2%} annually with a maximum drawdown of {abs(d.loc['vol','MaxDrawdown']):.2%}, compared with {d.loc['trend','CAGR']:.2%} and {abs(d.loc['trend','MaxDrawdown']):.2%} for trend timing. Under the reference specification, volatility targeting reduced risk at a modest return cost relative to trend timing. Combining the two rules did not improve the recent-period return–drawdown trade-off.
 
-{focused}
+## 1. Data and specification
 
-## 研究方法与完整实验
+Daily adjusted GLD closing prices cover 2005–2025; 2005–2006 provide indicator warm-up. Fixed-rule evaluation begins on {cfg['start']}. Results are denominated in USD. The analysis uses a single vendor and does not independently verify exchange data.
 
-研究标的是美元黄金 ETF GLD，采用复权收盘价。预热数据从 2005 年开始，固定策略从 {cfg['start']} 开始。单边成本 {cfg['cost_bps']} bps，现金年利率假设 {cfg['cash_rate']:.2%}。不做空、不加杠杆、不模拟税收和整数份额限制。
+Trend timing allocates fully to gold when the closing price exceeds its {cfg['ma']}-session moving average and otherwise holds cash. Volatility targeting sets gold exposure to min(1, {cfg['target_vol']:.2%}/max(estimated volatility, 1%)), using the sample standard deviation of {cfg['vol_window']} daily returns, annualized by √252. The combined rule multiplies this exposure by the trend indicator. All exposures are long-only and capped at 100%.
 
-所有策略使用同一月度执行规则：上一交易日形成信号，在每月首个交易日收盘调仓。旧份额承担成交日价格变化，新份额从成交后起作用；调仓成本根据漂移后的实际仓位计算。期末按市值计价，不假设清仓。
+Buy-and-hold and monthly rebalanced 50% gold/50% cash serve as benchmarks. An auxiliary mean-reversion rule holds gold when the {cfg['mr_window']}-session price z-score is below −{cfg['mr_entry']}; it is evaluated at the same monthly frequency.
 
-主模型：价格高于 {cfg['ma']} 日均线时，黄金仓位为 min(1, {cfg['target_vol']:.2%}/估计波动率)，否则为零；波动率由过去 {cfg['vol_window']} 日收益估计，估计值下限为1%。风险目标不是实际风险上限。
+Signals observed at the previous close are executed at the first trading-day close of each month. Existing holdings earn the execution-day return. Costs are {cfg['cost_bps']:g} basis points per unit of traded value, per side; cash earns a constant {cfg['cash_rate']:.2%}. Holdings drift between rebalances. Taxes, integer share constraints, and market impact beyond the cost assumption are excluded. Terminal positions are marked to market without liquidation.
 
-月度均值回归作为另一类假设：若收盘价的 {cfg['mr_window']} 日价格 z-score 小于 -{cfg['mr_entry']}，下次月度执行时持仓100%，否则空仓；中途不执行止损或回归均值退出。它是月度超跌配置，不是高频黄金交易系统。
+## 2. Fixed-rule results
 
-## 固定策略结果
+**Table 1. Full sample, 2007–2025.**
 
 {table(full)}
 
-### 2020—2025 历史分段
+**Table 2. Historical subperiod, 2020–2025.**
 
-{table(hold)}
+{table(recent)}
 
-![固定策略](fixed_strategies.png)
+![Fixed-rule comparison](plain_comparison.png)
 
-这六个规则没有根据此表重新挑选参数。历史分段不是事前封存样本；新增均值回归是在已看过历史表现后提出，仍属于探索性分析。对比固定50%仓位有助于区分减少敞口与择时，但不构成严格的风险匹配或因果归因。
+*Figure 1. Annualized return, annualized volatility, and maximum drawdown. Scales are shared within each column. Drawdown is reported as a positive loss magnitude. The subperiod is contained in the full sample; these are not independent replications.*
 
-## 年度滚动选参
+Relative to trend timing in 2020–2025, volatility targeting changed annualized return by {(d.loc['vol','CAGR']-d.loc['trend','CAGR'])*100:+.2f} percentage points and reduced maximum drawdown by {(abs(d.loc['trend','MaxDrawdown'])-abs(d.loc['vol','MaxDrawdown']))*100:.2f} points. The combined rule returned {d.loc['combined','CAGR']:.2%} with a {abs(d.loc['combined','MaxDrawdown']):.2%} drawdown. The fixed 50% benchmark returned {d.loc['fixed_50','CAGR']:.2%} with an {abs(d.loc['fixed_50','MaxDrawdown']):.2%} drawdown. Lower exposure therefore remains an important alternative explanation for apparent risk reduction.
 
-从 {cfg['walk_forward']['first_test_year']} 年开始，每年只使用过去 {cfg['walk_forward']['train_years']} 个自然年的数据，在9个趋势＋风险参数组合中选择训练期扣费夏普最高者，下一年冻结参数。训练模拟每次从现金启动，不收期末清仓费；测试组合跨年延续份额，并在下一年第一次月度执行时计入切换成本。
+![Account paths](plain_journey.png)
 
-训练截止于上一年最后一个交易日；该日收盘后选择参数，使用该日信号于下一年首个交易日收盘成交。指标预热允许使用训练窗口前已知价格，训练打分仅用窗口内收益。并列时依次选择较小均线窗口、较低风险目标，规则明确可复现。
+*Figure 2. Existing strategy accounts rebased to USD 100,000 at year-end 2019, with subperiod drawdowns below. Rebased accounts retain prior holdings; they are not newly opened portfolios. The upper panel uses a linear scale.*
 
-下列基准和滚动策略均在首次测试日从现金启动，均计入初始买入费用，不拼接每年重置为1的净值。
+## 3. Rolling parameter selection
+
+Each test year uses parameters selected from the preceding {cfg['walk_forward']['train_years']} calendar years. Nine combinations of moving-average length and volatility target are ranked by training-period net Sharpe ratio. Parameters are frozen for the next year; test holdings and trading costs carry across year boundaries. All comparison accounts below start from cash on the same first test date.
+
+**Table 3. Walk-forward evaluation, 2015–2025.**
 
 {table(wf_summary)}
 
-![滚动选参](walk_forward.png)
+The paired annualized mean daily-return difference between walk-forward allocation and fixed 50% exposure is {interval['annualized_mean_daily_difference']:.2%}. A circular block bootstrap ({interval['block_size']}-session blocks; {interval['repetitions']} replications) gives a 95% percentile interval of [{interval['lower_95']:.2%}, {interval['upper_95']:.2%}]. This interval concerns arithmetic mean returns, not CAGR. It neither corrects for multiple specification searches nor repeats parameter selection within each resample.
 
-完整参数选择见 walk_forward_folds.csv；每年全部候选分数见 training_candidates.csv。下一年的历史会在再下一次训练时变为可用数据，这符合滚动过程；不能因此将整个测试序列描述为一直未见的单一封存样本。
+## 4. Interpretation and limitations
 
-## 不确定性
+The reference results support volatility targeting as an exposure-control method, rather than evidence of return predictability. The trend filter does not consistently improve the return–drawdown trade-off, and rolling optimization does not outperform the simple fixed-weight benchmark. These conclusions are conditional on the instrument, sample, execution convention, and chosen parameters.
 
-滚动策略相对固定50%基准的“平均日收益差×252”为 {interval['annualized_mean_daily_difference']:.2%}。配对循环区块 bootstrap 的95%百分位区间为 [{interval['lower_95']:.2%}, {interval['upper_95']:.2%}]，区块长度 {interval['block_size']}，重复 {interval['repetitions']} 次，随机种子 {interval['seed']}。
+The study is retrospective. Rolling evaluation limits direct look-ahead in parameter selection but does not eliminate researcher selection bias. Historical volatility is not a loss bound. Cash returns, currency conversion, execution frictions, and alternative parameter choices may alter the comparison. The benchmarks are not exactly risk-matched, so performance differences do not identify a causal timing effect.
 
-这是收益差均值的不确定性描述，不是 CAGR 差的区间，不是盈利概率。区块法依赖近似平稳假设，没有校正多次尝试，也没有在每次重采样中重跑选参；不能据此证明未来存在显著超额收益。
+## Reproducibility
 
-## 审计与局限
-
-每个策略输出逐日净值、信号、目标仓位、真实仓位、份额、现金及成交金额；trades/ 记录实际非零调仓，而非虚构成一笔笔完整开平仓胜率。源数据哈希和实际依赖版本见 run_manifest.json。
-
-参数敏感性在历史2020—2025阶段事后展示，不能再以最优参数冒充独立测试。成本敏感性针对固定组合模型；改变成本后滚动选参需另行完整重跑。现金假设为常数，没有替代为实际历史短债工具。价格未做第二来源核验，收盘价成交与滑点是简化。GLD不直接代表人民币黄金ETF、期货展期或现货保证金产品。
-
-本次新增方法参考公开项目的模块拆分、walk-forward 和研究记录方式，代码独立实现。来源、阅读范围和固定提交号见 ../../docs/REFERENCES.md 与 reference_manifest.json。没有复制参考仓库的收益声明，也没有将历史研究说成实盘业绩。
+CAGR uses a 252-session annualization convention. Sharpe assumes a zero risk-free rate. Subperiod drawdowns reset the running peak at the subperiod boundary. Source hash: `{sha}`. The accompanying CSV files record metrics, candidate scores, selected parameters, and sensitivity results. Data provenance and software versions are recorded in `run_manifest.json`. See [methodology](../../docs/METHODOLOGY.md) and [references](../../docs/REFERENCES.md).
 '''
     (out/'REPORT.md').write_text(text,encoding='utf-8')

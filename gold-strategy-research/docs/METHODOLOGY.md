@@ -1,22 +1,30 @@
-# 数学与执行细节
+# Methodology
 
-以复权收盘价 P_t 计算简单收益 r_t=P_t/P_(t-1)-1。长期均值 MA_t 使用含当前日的过去200个交易日；年化波动率 sigma_t 为过去60个日收益的样本标准差乘 sqrt(252)。组合目标仓位为：
+## Allocation rules
 
-```math
-w_t^*=\mathbf{1}_{P_t>MA_t}\min\left(1,\frac{0.10}{\max(\hat\sigma_t,0.01)}\right).
-```
+Let P_t denote the adjusted closing price and r_t = P_t/P_(t−1) − 1. The trend indicator is I_t = 1{P_t > MA_200,t}. Estimated volatility is the sample standard deviation of the preceding 60 daily returns, multiplied by √252.
 
-t 日收盘后的目标信息只能在 t+1 日或更晚成交。引擎将全部信号统一 shift(1)，只在每月首个交易日收盘执行。非调仓日份额不变，真实仓位随价格自然变化。策略模块本身不做shift，防止重复滞后。
+The volatility-targeted weight is a_t = min(1, 0.10/max(σ_t, 0.01)). Trend, volatility, and combined allocations are I_t, a_t, and I_t a_t, respectively. The auxiliary mean-reversion rule allocates fully when the 20-session price z-score is below −1.5 and holds cash otherwise.
 
-设调仓前净值 V、黄金市值 A、成交后黄金市值 X、目标权重 w，单边成本率 c。解自融资条件 X=w(V-c|X-A|)：
+## Execution and accounting
 
-- 买入分支：X=w(V+cA)/(1+wc)。
-- 卖出分支：X=w(V-cA)/(1-wc)。
+Targets are observed at the prior close and executed at the first trading-day close of each month. Signal lagging occurs once, inside the execution engine. Shares remain constant between rebalances; portfolio weights therefore drift with prices.
 
-剩余现金 V-X-c|X-A|；成交后份额 X/P。记录精确成交金额及费用；权重相减不能代替实际成交，因为价格变化会造成漂移。初始净值归一化为1，允许碎股。
+For pre-trade wealth V, existing gold value A, post-trade gold value X, target weight w, and proportional cost c, self-financing requires X = w(V − c|X−A|). Thus:
 
-年化收益采用252交易日口径；最大回撤包括初始净值1；分段最大回撤在段首重置高点。分段收益保留跨段持仓，滚动对照则从统一测试日新建账户。图中回撤采用各图完整评价期间。
+- Purchases: X = w(V+cA)/(1+wc).
+- Sales: X = w(V−cA)/(1−wc).
 
-滚动选参只比较同类combined策略的9组候选，不从所有策略中挑冠军。每个测试年用前5个自然年的扣费夏普选参，预热来自当时已经存在的更早数据。切换参数不重置账户。候选分数和选定时间全部记录。
+Cash after trading is V−X−c|X−A|. Initial purchases incur costs; terminal positions are marked to market without liquidation. Fractional shares are permitted.
 
-所有统计结果是描述性历史模拟。新增模型、窗口长度与参数网格仍有研究者选择偏差；滚动检验不能消除这种偏差。最终应冻结设计并积累真正事前生成的信号记录。
+## Evaluation
+
+CAGR uses 252 trading sessions per year. Sharpe uses arithmetic daily mean returns, sample standard deviation, and a zero risk-free rate. Maximum drawdown includes initial wealth and resets its running peak at each reported subperiod boundary. Subperiod returns retain existing positions.
+
+For each test year, nine combined-rule specifications are scored over the preceding five calendar years by net Sharpe. Earlier observations are used only for indicator warm-up. Ties favor shorter moving averages, then lower volatility targets. Parameters are frozen for the next year, and test holdings carry continuously across years.
+
+A paired circular block bootstrap describes uncertainty in annualized mean daily-return differences. It does not estimate a CAGR confidence interval, account for multiple specification searches, or re-estimate the selection procedure in each resample.
+
+## Scope
+
+This is a retrospective single-asset study. Rolling selection reduces direct look-ahead but does not eliminate researcher selection bias. Benchmarks are not exactly risk-matched; differences cannot be interpreted as causal timing effects. The prose interpretation refers to the committed reference experiment and should be reassessed after configuration changes.
