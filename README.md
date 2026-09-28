@@ -2,6 +2,8 @@
 
 ## 黄金投资模型与策略研究
 
+**第一次阅读，从[通俗图解](gold-strategy-research/reports/reference/BEGINNER.md)开始。**用10万元例子讲清怎么买、买多少，以及收益和风险图怎么读。
+
 [项目说明与运行方法](gold-strategy-research/README.md) · [研究报告](gold-strategy-research/reports/reference/REPORT.md) · [参考来源](gold-strategy-research/docs/REFERENCES.md)
 
 包含六种黄金配置规则、年度滚动选参、交易成本分析及离线测试。历史模拟不代表未来收益。

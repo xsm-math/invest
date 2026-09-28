@@ -29,8 +29,10 @@ def write_report(out,summary,wf_summary,folds,interval,cfg,sha):
     hold=summary[summary.Period=='2020-2025']; full=summary[summary.Period=='All']
     from .comparison import comparison
     focused = comparison(summary, cfg)
-    (out/'COMPARISON.md').write_text('# 趋势择时与波动率控制：明确问题、数字与结论\n\n' + focused, encoding='utf-8')
+    (out/'COMPARISON.md').write_text('# 趋势择时与波动率控制：明确问题、数字与结论\n\n第一次阅读？先看[通俗图解](BEGINNER.md)。\n\n' + focused, encoding='utf-8')
     text=f'''# 黄金策略研究：模块化与滚动检验版
+
+第一次阅读？先看[通俗图解](BEGINNER.md)：术语、资金分配例子，以及每张图的读法。
 
 本报告由本次程序输出生成；价格截至 {cfg['end_exclusive']}（不含），数据 SHA256：`{sha}`。
 

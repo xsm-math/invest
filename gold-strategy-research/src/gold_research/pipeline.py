@@ -72,5 +72,7 @@ def run(config,out):
               'note':'Historical research; no genuinely untouched prospective test. Raw market data excluded from Git.'}
     (out/'run_manifest.json').write_text(json.dumps(manifest,indent=2),encoding='utf-8')
     write_report(out,summary,wf_summary,folds,boot,cfg,sha)
+    from .beginner import explain
+    explain(out, summary, results)
     print(wf_summary.to_string(index=False));print(f'Report: {out / "REPORT.md"}')
     return summary,wf_summary
