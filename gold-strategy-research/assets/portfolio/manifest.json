@@ -1,0 +1,9 @@
+{
+  "project": "gold",
+  "chart": "summary.svg",
+  "scope": "Presentation from existing aggregate outputs; no refitting or new experiment.",
+  "inputs": {
+    "reports/reference/metrics.csv": "22c6dc3b03e82873e6150627ce41983adda5a05ebd296e33dcd26d5307983011"
+  },
+  "matplotlib": "3.11.2"
+}
